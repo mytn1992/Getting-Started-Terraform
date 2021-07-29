@@ -1,0 +1,8 @@
+.DS_Store
+.vscode
+config/*
+reports/
+__debug_bin
+telescope
+.deploy
+!config/sample.toml

@@ -1,0 +1,40 @@
+[common]
+worker_count = 10
+
+[tfinv]
+credentials_file_path = ""
+spreadsheet_id = ""
+mapping_worksheet_name = ""
+
+[mirador]
+endpoint = ""
+user_name = ""
+password = ""
+telescope_index_tmpl = "telescope_{DATE}"
+vuln_management_index_tmpl = "vuln_management_test_{DATE}"
+
+[jira]
+username = ""
+password = ""
+endpoint = ""
+
+[jira.infraVuln]
+issue_type = "Infra Vulnerability"
+project = "TEST"
+[jira.infraVuln.customfields]
+vulnerability_code = "customfield_10203"
+tf = "customfield_10201"
+aws_account = "customfield_10204"
+system_engineer = "customfield_10206"
+analyst = "customfield_10205"
+criticality = "customfield_10200"
+tenable_plugin_id = "customfield_10202"
+
+[jira.appsec]
+project = "TEST"
+issue_type = "Security Bug"
+[jira.appsec.customfields]
+tf = "customfield_10301"
+severity = "customfield_10300"
+sla_breach = "customfield_10302"
+sla_deadline = "customfield_10303"

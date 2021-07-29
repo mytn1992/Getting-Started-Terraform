@@ -1,0 +1,186 @@
+[
+    {
+        "name": "AWS/S3",
+        "message": "The specified bucket does not exist"
+    },
+    {
+        "name": "BitBucket",
+        "message": "Repository not found"
+    },
+    {
+        "name": "Github",
+        "message": "There isn\\'t a Github Pages site here."
+    },
+    {
+        "name": "Shopify",
+        "message": "Sorry, this shop is currently unavailable."
+    },
+    {
+        "name": "Fastly",
+        "message": "Fastly error: unknown domain:"
+    },
+    {
+        "name": "Ghost",
+        "message": "The thing you were looking for is no longer here, or never was"
+    },
+    {
+        "name": "Heroku",
+        "message": "no-such-app.html|<title>no such app</title>|herokucdn.com/error-pages/no-such-app.html"
+    },
+    {
+        "name": "Pantheon",
+        "message": "The gods are wise, but do not know of the site which you seek."
+    },
+    {
+        "name": "Tumbler",
+        "message": "Whatever you were looking for doesn\\'t currently exist at this address."
+    },
+    {
+        "name": "Wordpress",
+        "message": "Do you want to register"
+    },
+    {
+        "name": "TeamWork",
+        "message": "Oops - We didn't find your site."
+    },
+    {
+        "name": "Helpjuice",
+        "message": "We could not find what you're looking for."
+    },
+    {
+        "name": "Helpscout",
+        "message": "No settings were found for this company:"
+    },
+    {
+        "name": "Cargo",
+        "message": "<title>404 &mdash; File not found</title>"
+    },
+    {
+        "name": "Uservoice",
+        "message": "This UserVoice subdomain is currently available!"
+    },
+    {
+        "name": "Surge",
+        "message": "project not found"
+    },
+    {
+        "name": "Intercom",
+        "message": "This page is reserved for artistic dogs.|Uh oh. That page doesn't exist</h1>"
+    },
+    {
+        "name": "Webflow",
+        "message": "<p class=\"description\">The page you are looking for doesn't exist or has been moved.</p>"
+    },
+    {
+        "name": "Kajabi",
+        "message": "<h1>The page you were looking for doesn't exist.</h1>"
+    },
+    {
+        "name": "Thinkific",
+        "message": "You may have mistyped the address or the page may have moved."
+    },
+    {
+        "name": "Tave",
+        "message": "<h1>Error 404: Page Not Found</h1>"
+    },
+    {
+        "name": "Wishpond",
+        "message": "<h1>https://www.wishpond.com/404?campaign=true"
+    },
+    {
+        "name": "Aftership",
+        "message": "Oops.</h2><p class=\"text-muted text-tight\">The page you're looking for doesn't exist."
+    },
+    {
+        "name": "Aha",
+        "message": "There is no portal here ... sending you back to Aha!"
+    },
+    {
+        "name": "Tictail",
+        "message": "to target URL: <a href=\"https://tictail.com|Start selling on Tictail."
+    },
+    {
+        "name": "Brightcove",
+        "message": "<p class=\"bc-gallery-error-code\">Error Code: 404</p>"
+    },
+    {
+        "name": "Bigcartel",
+        "message": "<h1>Oops! We couldn&#8217;t find that page.</h1>"
+    },
+    {
+        "name": "ActiveCampaign",
+        "message": "alt=\"LIGHTTPD - fly light.\""
+    },
+    {
+        "name": "Campaignmonitor",
+        "message": "Double check the URL or <a href=\"mailto:help@createsend.com"
+    },
+    {
+        "name": "Acquia",
+        "message": "The site you are looking for could not be found.|If you are an Acquia Cloud customer and expect to see your site at this address"
+    },
+    {
+        "name": "Proposify",
+        "message": "If you need immediate assistance, please contact <a href=\"mailto:support@proposify.biz"
+    },
+    {
+        "name": "Simplebooklet",
+        "message": "We can't find this <a href=\"https://simplebooklet.com"
+    },
+    {
+        "name": "GetResponse",
+        "message": "With GetResponse Landing Pages, lead generation has never been easier"
+    },
+    {
+        "name": "Vend",
+        "message": "Looks like you've traveled too far into cyberspace."
+    },
+    {
+        "name": "Jetbrains",
+        "message": "is not a registered InCloud YouTrack."
+    },
+    {
+        "name": "Smartling",
+        "message": "Domain is not configured"
+    },
+    {
+        "name": "Pingdom",
+        "message": "pingdom"
+    },
+    {
+        "name": "Tilda",
+        "message": "Domain has been assigned"
+    },
+    {
+        "name": "Surveygizmo",
+        "message": "data-html-name"
+    },
+    {
+        "name": "Mashery",
+        "message": "Unrecognized domain <strong>"
+    },
+    {
+        "name": "Divio",
+        "message": "Application not responding"
+    },
+    {
+        "name": "feedpress",
+        "message": "The feed has not been found."
+    },
+    {
+        "name": "readme",
+        "message": "Project doesnt exist... yet!"
+    },
+    {
+        "name": "statuspage",
+        "message": "You are being <a href='https>"
+    },
+    {
+        "name": "zendesk",
+        "message": "Help Center Closed"
+    },
+    {
+        "name": "worksites.net",
+        "message": "Hello! Sorry, but the webs>"
+    }
+]
