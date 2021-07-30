@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -52,7 +53,10 @@ func Run() {
 	log.SetLevel(loglevel)
 
 	start := time.Now()
-
+	// result, err := net.LookupHost("a2c9d55efe04e11e98edb025ca381bc6-29ca736679753e13.elb.ap-southeast-1.amazonaws.com")
+	// log.Info(err)
+	// log.Info(result)
+	// return
 	// log.Info("fetching account details from brahma")
 	// brahmaInv := brahma.NewBrahma(conf.Brahma)
 	// // 1. get file from s3 and parse to json
@@ -101,6 +105,18 @@ func Run() {
 		log.Fatalln("Couldn't parse the service file", err)
 	}
 
+	lowRiskfile, err := os.Open("lowRisk.json")
+	if err != nil {
+		log.Fatalf("Couldn't open the low risk file", err)
+	}
+	defer lowRiskfile.Close()
+	lowRiskList := []*string{}
+	byteValue, _ = ioutil.ReadAll(lowRiskfile)
+	err = json.Unmarshal(byteValue, &lowRiskList)
+	if err != nil {
+		log.Fatalln("Couldn't parse the low risk file", err)
+	}
+
 	// Open the file
 	csvfile, err := os.Open("testoutput.csv")
 	if err != nil {
@@ -124,23 +140,22 @@ func Run() {
 	for _, v := range dnsRecords {
 		guardC <- 1
 		wg.Add(1)
-		go func(v DNSRecord) {
-			if v.Type == "A" || v.Type == "AAAA" || v.Type == "CNAME" {
-				if isSubdomainTakeover(v, services) {
+		go func(r DNSRecord) {
+			if r.Type == "A" || r.Type == "AAAA" || r.Type == "CNAME" {
+				if isSubdomainTakeover(r, services, lowRiskList) {
 					mutex.Lock()
-					results = append(results, v)
+					results = append(results, r)
 					mutex.Unlock()
 				}
-			} else if v.Type == "NS" {
-				if isNSTakeover(v) {
+			} else if r.Type == "NS" {
+				if isNSTakeover(r) {
 					mutex.Lock()
-					results = append(results, v)
+					results = append(results, r)
 					mutex.Unlock()
 				}
 			}
-
-			wg.Done()
 			<-guardC
+			wg.Done()
 		}(v)
 	}
 	wg.Wait()
@@ -238,46 +253,48 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func isSubdomainTakeover(record DNSRecord, services []*Service) bool {
+func isSubdomainTakeover(record DNSRecord, services []*Service, lowRiskList []*string) bool {
 	// 1. try to resolve a record
 	log.Info("=======================")
 	target := strings.Split(record.Target, ",")[0]
 	log.Infof("Scanning: %v", target)
+	// skip it if it it in the lowrisklist
+	if isInLowRiskList(lowRiskList, target) {
+		log.Infof("Skipped: %v, low risk", target)
+		return false
+	}
 	result, err := net.LookupHost(target)
 	if err != nil {
 		log.Infof("LookupHost Result: %v", err)
 		return true
 	} else {
-		if len(result) == 0 {
-			log.Infof("LookupHost Result: %v", "cannot fetch A record")
-		} else {
-			log.Infof("LookupHost Result: %v", result)
-			ip1 := result[0]
-			// 2. check if it is private ip
-			if !isPrivateIP(net.ParseIP(ip1)) {
-				// try to request it
-				protocols := []string{"http://", "https://"}
-				for _, p := range protocols {
-					client := http.Client{
-						Timeout: 2 * time.Second,
-					}
-					resp, err := client.Get(p + target)
-					if err == nil {
-						defer resp.Body.Close()
-						html, err := ioutil.ReadAll(resp.Body)
-						if err != nil {
-							log.Error(err)
-						}
-						// show the HTML code as a string %s
-						isVulnerable, service := isKnownResponse(string(html), []*Service{})
-						if isVulnerable {
-							log.Info(service)
-							return true
-						}
-					}
+		log.Infof("LookupHost Result: %v", result)
+		ip1 := result[0]
+		// 2. check if it is private ip
+		if isPrivateIP(net.ParseIP(ip1)) {
+			return false
+		}
+		// try to request it
+		protocols := []string{"http://", "https://"}
+		for _, p := range protocols {
+			client := http.Client{
+				Timeout: 2 * time.Second,
+			}
+			resp, err := client.Get(p + target)
+			if err == nil {
+				defer resp.Body.Close()
+				html, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Error(err)
+				}
+				// show the HTML code as a string %s
+				isVulnerable, _ := isKnownResponse(string(html), []*Service{})
+				if isVulnerable {
+					return true
 				}
 			}
 		}
+
 	}
 	return false
 }
@@ -346,6 +363,16 @@ func processOneAcc(account brahma.Account) ([]interface{}, error) {
 		}
 	}
 	return dnsRecordsFromInv, nil
+}
+
+func isInLowRiskList(lowRiskList []*string, target string) bool {
+	for _, l := range lowRiskList {
+		matched, _ := regexp.Match(*l, []byte(target))
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func initLogging() {

@@ -1,0 +1,11 @@
+[
+    "\\.cache\\.amazonaws\\.com(\\.)?$",
+    "\\.acm-validations\\.aws(\\.)?$",
+    "\\.rds\\.amazonaws\\.com(\\.)?$",
+    "\\.cache\\.amazonaws\\.com(\\.)?$",
+    "\\.vpce\\.amazonaws\\.com(\\.)?$",
+    "^(internal-)(.*)(\\.elb\\.amazonaws\\.com(\\.)?)$",
+    "\\.compute\\.internal(\\.)?$",
+    "\\.grab\\.com(\\.)?$",
+    "\\.dkim\\.amazonses\\.com(\\.)?$"
+]

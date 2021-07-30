@@ -19,7 +19,7 @@ type DNSRecord struct {
 	Type       string `mapstructure:"type" csv:"type"`
 	Target     string `mapstructure:"target" csv:"target"`
 	Provider   string `mapstructure:"provider" csv:"provider"`
-	AccountId  string `mapstructure:"accountId" csv:"accountId"`
+	AccountId  string `mapstructure:"accountId" csv:"account_id"`
 	TechFamily string `mapstructure:"tech_family" csv:"tech_family"`
 }
 
