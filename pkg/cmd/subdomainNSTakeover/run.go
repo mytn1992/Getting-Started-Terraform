@@ -1,7 +1,6 @@
 package subdomainNSTakeover
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	logstd "log"
@@ -19,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common/brahma"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common/util"
+	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/module/aws/ec2w"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/module/aws/route53w"
 )
 
@@ -53,115 +53,142 @@ func Run() {
 	log.SetLevel(loglevel)
 
 	start := time.Now()
-	// result, err := net.LookupHost("a2c9d55efe04e11e98edb025ca381bc6-29ca736679753e13.elb.ap-southeast-1.amazonaws.com")
-	// log.Info(err)
-	// log.Info(result)
-	// return
-	// log.Info("fetching account details from brahma")
-	// brahmaInv := brahma.NewBrahma(conf.Brahma)
-	// // 1. get file from s3 and parse to json
-	// // 2. filter all the accounts
-	// accounts, err := brahmaInv.GetAccounts()
-	// if err != nil {
-	// 	log.Fatalf("error while loading accounts from brahma - %v", err)
-	// }
-	// log.Info(accounts)
 
-	// dnsRecordsFromInv := []interface{}{}
-	// wg := sync.WaitGroup{}
-	// guardC := make(chan int, conf.Common.WorkerCount)
-	// mutex := &sync.Mutex{}
-	// // recordsTypes := "A |AAAA | CNAME | NS"
-	// for _, account := range accounts {
-	// 	wg.Add(1)
-	// 	guardC <- 1
-	// 	go func(account brahma.Account) {
-	// 		_dnsRecordsFromInv, err := processOneAcc(account)
-	// 		if err == nil {
-	// 			mutex.Lock()
-	// 			dnsRecordsFromInv = append(dnsRecordsFromInv, _dnsRecordsFromInv...)
-	// 			mutex.Unlock()
-	// 		}
-	// 		wg.Done()
-	// 		<-guardC
-	// 	}(account)
-	// }
-
-	// wg.Wait()
-	// exported, _ := util.WriteToCSV("testoutput.csv", dnsRecordsFromInv)
-
-	// log.Infof("Exported to %v", *exported)
-
-	// Open the file
-	servicesfile, err := os.Open("services.json")
+	log.Info("fetching account details from brahma")
+	brahmaInv := brahma.NewBrahma(conf.Brahma)
+	// 1. get file from s3 and parse to json
+	// 2. filter all the accounts
+	accounts, err := brahmaInv.GetAccounts()
 	if err != nil {
-		log.Fatalf("Couldn't open the service file", err)
+		log.Fatalf("error while loading accounts from brahma - %v", err)
 	}
-	defer servicesfile.Close()
-	services := []*Service{}
-	byteValue, _ := ioutil.ReadAll(servicesfile)
-	err = json.Unmarshal(byteValue, &services)
-	if err != nil {
-		log.Fatalln("Couldn't parse the service file", err)
-	}
+	log.Info(accounts)
 
-	lowRiskfile, err := os.Open("lowRisk.json")
-	if err != nil {
-		log.Fatalf("Couldn't open the low risk file", err)
-	}
-	defer lowRiskfile.Close()
-	lowRiskList := []*string{}
-	byteValue, _ = ioutil.ReadAll(lowRiskfile)
-	err = json.Unmarshal(byteValue, &lowRiskList)
-	if err != nil {
-		log.Fatalln("Couldn't parse the low risk file", err)
-	}
-
-	// Open the file
-	csvfile, err := os.Open("testoutput.csv")
-	if err != nil {
-		log.Fatalln("Couldn't open the csv file", err)
-	}
-	defer csvfile.Close()
-	// Parse records to map
-	records, err := util.CSVToMap(csvfile)
-	if err != nil {
-		log.Fatalln("Couldn't open the csv file", err)
-	}
-
-	dnsRecords := []DNSRecord{}
-	b, _ := json.Marshal(records)
-	json.Unmarshal(b, &dnsRecords)
-
-	results := []interface{}{}
+	dnsRecordsFromInv := []interface{}{}
+	ipsFromInv := []interface{}{}
 	wg := sync.WaitGroup{}
 	guardC := make(chan int, conf.Common.WorkerCount)
 	mutex := &sync.Mutex{}
-	for _, v := range dnsRecords {
-		guardC <- 1
+	for _, account := range accounts {
 		wg.Add(1)
-		go func(r DNSRecord) {
-			if r.Type == "A" || r.Type == "AAAA" || r.Type == "CNAME" {
-				if isSubdomainTakeover(r, services, lowRiskList) {
-					mutex.Lock()
-					results = append(results, r)
-					mutex.Unlock()
-				}
-			} else if r.Type == "NS" {
-				if isNSTakeover(r) {
-					mutex.Lock()
-					results = append(results, r)
-					mutex.Unlock()
+		guardC <- 1
+		go func(account brahma.Account) {
+			_dnsRecordsFromInv, err := processOneAcc(account)
+			if err == nil {
+				mutex.Lock()
+				dnsRecordsFromInv = append(dnsRecordsFromInv, _dnsRecordsFromInv...)
+				mutex.Unlock()
+			}
+
+			ec2Wrapper, err := ec2w.NewWrapper(&account)
+			if err == nil {
+				ips, err := ec2Wrapper.ListIPs()
+				if err == nil {
+					for _, v := range ips.Addresses {
+						value := struct {
+							IP            *string
+							AssociationId *string
+							AllocationId  *string
+						}{
+							IP:            v.PublicIp,
+							AssociationId: v.AssociationId,
+							AllocationId:  v.AllocationId,
+						}
+						mutex.Lock()
+						ipsFromInv = append(ipsFromInv, value)
+						mutex.Unlock()
+					}
 				}
 			}
-			<-guardC
 			wg.Done()
-		}(v)
+			<-guardC
+		}(account)
 	}
-	wg.Wait()
-	exported, _ := util.WriteToCSV("scanresult.csv", results)
 
-	log.Infof("Exported to %v", *exported)
+	wg.Wait()
+	exportedDNS, err := util.WriteToCSV("testoutput.csv", dnsRecordsFromInv)
+	if err != nil {
+		log.Info(err)
+	} else {
+		log.Infof("Exported to %v", *exportedDNS)
+	}
+	exportedIPS, err := util.WriteToCSV("ips.csv", ipsFromInv)
+	if err != nil {
+		log.Info(err)
+	} else {
+		log.Infof("Exported to %v", *exportedIPS)
+	}
+	return
+	// Open the file
+	// servicesfile, err := os.Open("services.json")
+	// if err != nil {
+	// 	log.Fatalf("Couldn't open the service file", err)
+	// }
+	// defer servicesfile.Close()
+	// services := []*Service{}
+	// byteValue, _ := ioutil.ReadAll(servicesfile)
+	// err = json.Unmarshal(byteValue, &services)
+	// if err != nil {
+	// 	log.Fatalln("Couldn't parse the service file", err)
+	// }
+
+	// lowRiskfile, err := os.Open("lowRisk.json")
+	// if err != nil {
+	// 	log.Fatalf("Couldn't open the low risk file", err)
+	// }
+	// defer lowRiskfile.Close()
+	// lowRiskList := []*string{}
+	// byteValue, _ = ioutil.ReadAll(lowRiskfile)
+	// err = json.Unmarshal(byteValue, &lowRiskList)
+	// if err != nil {
+	// 	log.Fatalln("Couldn't parse the low risk file", err)
+	// }
+
+	// // Open the file
+	// csvfile, err := os.Open("test.csv")
+	// if err != nil {
+	// 	log.Fatalln("Couldn't open the csv file", err)
+	// }
+	// defer csvfile.Close()
+	// // Parse records to map
+	// records, err := util.CSVToMap(csvfile)
+	// if err != nil {
+	// 	log.Fatalln("Couldn't open the csv file", err)
+	// }
+
+	// dnsRecords := []DNSRecord{}
+	// b, _ := json.Marshal(records)
+	// json.Unmarshal(b, &dnsRecords)
+
+	// results := []interface{}{}
+	// wg := sync.WaitGroup{}
+	// guardC := make(chan int, conf.Common.WorkerCount)
+	// mutex := &sync.Mutex{}
+	// for _, v := range dnsRecords {
+	// 	guardC <- 1
+	// 	wg.Add(1)
+	// 	go func(r DNSRecord) {
+	// 		if r.Type == "A" || r.Type == "AAAA" || r.Type == "CNAME" {
+	// 			if isSubdomainTakeover(r, services, lowRiskList) {
+	// 				mutex.Lock()
+	// 				results = append(results, r)
+	// 				mutex.Unlock()
+	// 			}
+	// 		} else if r.Type == "NS" {
+	// 			if isNSTakeover(r) {
+	// 				mutex.Lock()
+	// 				results = append(results, r)
+	// 				mutex.Unlock()
+	// 			}
+	// 		}
+	// 		<-guardC
+	// 		wg.Done()
+	// 	}(v)
+	// }
+	// wg.Wait()
+	// exported, _ := util.WriteToCSV("scanresult2.csv", results)
+
+	// log.Infof("Exported to %v", *exported)
 
 	/*
 
