@@ -27,3 +27,8 @@ type Service struct {
 	Name    string `mapstructure:"name" json:"name"`
 	Message string `mapstructure:"message" json:"message"`
 }
+type IP struct {
+	IP            string `mapstructure:"ip" json:"ip"`
+	AssociationId string `mapstructure:"association_id" json:"association_id"`
+	AllocationId  string `mapstructure:"allocation_id" json:"allocation_id"`
+}

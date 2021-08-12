@@ -1,0 +1,7 @@
+source,type,target,provider,accountId,tech_family
+a.grab.com,NS,grab.com.,AWS,1111,GFG
+c.grab.com,A,54.169.164.82,AWS,1111,GFG
+e.grab.com,A,52.77.202.233,AWS,1111,GFG
+g.grab.com,A,id.myteksi.net.,AWS,1111,GFG
+g.grab.com,CNAME,_99712cb483512ca8ea3c60678e5f4b53.mvtxpqxpkb.acm-validations.aws.,AWS,1111,GFG
+nexus.gfg.pr.,CNAME,a2c9d55efe04e11e98edb025ca381bc6-29ca736679753e13.elb.ap-southeast-1.amazonaws.com,AWS,101586075322,
