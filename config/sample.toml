@@ -1,40 +1,25 @@
 [common]
-worker_count = 10
+worker_count = 20
 
 [tfinv]
-credentials_file_path = ""
-spreadsheet_id = ""
-mapping_worksheet_name = ""
+credentials_file_path = "config/gapi-keys.json"
+spreadsheet_id = "1MmiHyYiXeAnstoNU2mN3EKUUE0JpWCc8V62WF8MYkiE"
+mapping_worksheet_name = "tf_mappings"
 
 [mirador]
-endpoint = ""
+# endpoint = "http://localhost:9200/"
+# user_name = ""
+# password = ""
+endpoint = "https://elasticsearch.sg.aws.grabsecurity.com:443"
 user_name = ""
 password = ""
-telescope_index_tmpl = "telescope_{DATE}"
-vuln_management_index_tmpl = "vuln_management_test_{DATE}"
+telescope_index_tmpl = "telescope"
+vuln_management_index_tmpl = "vuln_management_test"
 
-[jira]
-username = ""
-password = ""
-endpoint = ""
-
-[jira.infraVuln]
-issue_type = "Infra Vulnerability"
-project = "TEST"
-[jira.infraVuln.customfields]
-vulnerability_code = "customfield_10203"
-tf = "customfield_10201"
-aws_account = "customfield_10204"
-system_engineer = "customfield_10206"
-analyst = "customfield_10205"
-criticality = "customfield_10200"
-tenable_plugin_id = "customfield_10202"
-
-[jira.appsec]
-project = "TEST"
-issue_type = "Security Bug"
-[jira.appsec.customfields]
-tf = "customfield_10301"
-severity = "customfield_10300"
-sla_breach = "customfield_10302"
-sla_deadline = "customfield_10303"
+[brahma]
+#local or aws
+location = "local"
+inventory_local_path = "data/brahma.prd.json"
+inventory_aws_s3_bucket = "g-devsecops-home"
+inventory_aws_s3_key = "resources/grab-mobility-aws-accounts.json"
+platform_filter = "aws"
