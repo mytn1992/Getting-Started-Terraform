@@ -51,7 +51,6 @@ func Run() {
 
 	start := time.Now()
 	//fetchDNSRecords(*conf)
-
 	// Open the services file
 	services := []*Service{}
 	err = util.OpenJSONFile("data/services.json", &services)
@@ -111,7 +110,10 @@ func Run() {
 	}
 	wg.Wait()
 	if len(results) > 0 {
-		exported, _ := util.WriteToCSV("output/result.csv", results)
+		exported, err := util.WriteToCSV("output.csv", results)
+		if err != nil {
+			log.Fatal(err)
+		}
 		log.Infof("Exported to %v", *exported)
 	}
 

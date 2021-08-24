@@ -10,12 +10,16 @@ import (
 
 func NewWrapper() {
 	//Create a Manager client
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	authorizer, _ := auth.NewAuthorizerFromCLI()
 	c := dns.NewZonesClient("d7c31df5-29ac-4d96-87d4-78dd5e8b107e")
 	c.Client.Authorizer = authorizer
-	fmt.Println(c)
-	r, err := c.List(context.Background(), nil)
+	count := int32(100)
+	r, err := c.List(context.Background(), &count)
 	fmt.Println(err)
-	fmt.Println(r)
-
+	fmt.Println(r.Response().Status)
+	for i, ii := range r.Values() {
+		fmt.Println(i)
+		fmt.Println(*ii.Name)
+		fmt.Println(*ii.NumberOfRecordSets)
+	}
 }
