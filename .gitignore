@@ -6,3 +6,4 @@ __debug_bin
 telescope
 .deploy
 !config/sample.toml
+!config/azurecredentials.json

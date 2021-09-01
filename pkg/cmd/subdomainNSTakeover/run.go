@@ -16,10 +16,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common"
+	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common/azureconfig"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common/brahma"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/common/util"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/module/aws/ec2w"
 	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/module/aws/route53w"
+	"gitlab.myteksi.net/dev-sec-ops/subdomainNSTakeover/pkg/module/azure/azuredns"
 )
 
 var subdoomainTakeoverStatusMap = struct {
@@ -50,7 +53,8 @@ func Run() {
 	log.SetLevel(loglevel)
 
 	start := time.Now()
-	//fetchDNSRecords(*conf)
+	fetchAllDNSRecords(*conf)
+
 	// Open the services file
 	services := []*Service{}
 	err = util.OpenJSONFile("data/services.json", &services)
@@ -77,7 +81,7 @@ func Run() {
 	}
 
 	// Open the file
-	dnsRecords := []DNSRecord{}
+	dnsRecords := []common.DNSRecord{}
 	err = util.OpenCSVFile("data/inventory.csv", &dnsRecords)
 	if err != nil {
 		log.Fatal(err)
@@ -90,7 +94,7 @@ func Run() {
 	for _, v := range dnsRecords {
 		guardC <- 1
 		wg.Add(1)
-		go func(r DNSRecord) {
+		go func(r common.DNSRecord) {
 			if r.Type == "A" || r.Type == "AAAA" || r.Type == "CNAME" {
 				if isSubdomainTakeover(r, services, lowRiskList, ipsMap) != subdoomainTakeoverStatusMap.NonVulnerable {
 					mutex.Lock()
@@ -119,6 +123,7 @@ func Run() {
 
 	timeTaken := time.Since(start)
 	log.Infof("done shipping. time taken %v", timeTaken)
+	log.Infof("vulnerable count: %v, out of %v records", len(results), len(dnsRecords))
 }
 
 func isPrivateIP(ip net.IP) bool {
@@ -151,7 +156,7 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func isSubdomainTakeover(record DNSRecord, services []*Service, lowRiskList []*string, ipsMap map[string]IP) int {
+func isSubdomainTakeover(record common.DNSRecord, services []*Service, lowRiskList []*string, ipsMap map[string]IP) int {
 	// 1. try to resolve a record
 	target := strings.Split(record.Target, ",")[0]
 	log.Infof("Scanning: %v", target)
@@ -202,7 +207,7 @@ func isSubdomainTakeover(record DNSRecord, services []*Service, lowRiskList []*s
 	return subdoomainTakeoverStatusMap.NonVulnerable
 }
 
-func isNSTakeover(record DNSRecord) bool {
+func isNSTakeover(record common.DNSRecord) bool {
 	target := record.Target
 	result, err := net.LookupNS(target)
 	if err != nil {
@@ -253,7 +258,7 @@ func processOneAcc(account brahma.Account) ([]interface{}, error) {
 			return nil, err
 		}
 		for _, recordset := range recordSets {
-			r := DNSRecord{
+			r := common.DNSRecord{
 				Source:    *recordset.Name,
 				Target:    route53wrapper.ParseTarget(recordset),
 				Type:      *recordset.Type,
@@ -276,7 +281,12 @@ func isInLowRiskList(lowRiskList []*string, target string) bool {
 	return false
 }
 
-func fetchDNSRecords(conf config) {
+func fetchAllDNSRecords(conf config) {
+	// fetchAWSDNSRecords(conf)
+	fetchAzureDNSRecords(conf)
+}
+
+func fetchAWSDNSRecords(conf config) {
 	log.Info("fetching account details from brahma")
 	brahmaInv := brahma.NewBrahma(conf.Brahma)
 	// 1. get file from s3 and parse to json
@@ -340,7 +350,50 @@ func fetchDNSRecords(conf config) {
 		log.Fatal(err)
 	}
 	log.Infof("Exported to %v", *exportedIPS)
+}
 
+func fetchAzureDNSRecords(conf config) {
+	log.Info("fetching DNS records from azure")
+	fmt.Printf("conf: %v\n", conf.Azure)
+	azureInv := azureconfig.NewAzure(conf.Azure)
+	subscriptions, err := azureInv.GetAccounts()
+	if err != nil {
+		log.Fatalf("Error while loading subscriptions from azure - %v", err)
+	}
+	log.Info(subscriptions)
+
+	dnsRecordsFromInv := []interface{}{}
+	wg := sync.WaitGroup{}
+	guardC := make(chan int, conf.Common.WorkerCount)
+	mutex := &sync.Mutex{}
+	for _, subscription := range subscriptions {
+		wg.Add(1)
+		guardC <- 1
+		go func(subscription azureconfig.Subscription) {
+
+			recordSets, err := azuredns.ListDNSBySubscription(subscription)
+			if err != nil {
+				log.Error(err)
+			}
+			for _, recordset := range recordSets {
+				mutex.Lock()
+				dnsRecordsFromInv = append(dnsRecordsFromInv, recordset)
+				mutex.Unlock()
+			}
+
+			wg.Done()
+			<-guardC
+		}(subscription)
+	}
+
+	wg.Wait()
+	exportedDNS, err := util.WriteToCSV("./testoutput-azure.csv", dnsRecordsFromInv)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("Exported to %v", *exportedDNS)
+
+	return
 }
 
 func initLogging() {
